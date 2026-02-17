@@ -1,0 +1,10 @@
+{
+	"id": "window-hotkeys",
+	"name": "Window Hotkeys",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Adds hotkeys for moving tabs between split groups in different directions (left, right, up, down)",
+	"author": "Amund Ersland",
+	"authorUrl": "https://github.com/amund-ersland",
+	"isDesktopOnly": false
+}
