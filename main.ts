@@ -2,6 +2,7 @@ import { Plugin, WorkspaceLeaf } from "obsidian";
 
 const MAX_COLUMNS = 3;
 const MAX_ROWS = 2;
+const RESIZE_STEP = 50; // Pixels to resize by
 
 export default class WindowHotkeysPlugin extends Plugin {
     async onload() {
@@ -38,6 +39,42 @@ export default class WindowHotkeysPlugin extends Plugin {
             name: "Move tab to lower split",
             callback: () => {
                 this.moveTabToDirection("down");
+            },
+        });
+
+        // Resize tab group right
+        this.addCommand({
+            id: "resize-tab-right",
+            name: "Stretch tab group to the right",
+            callback: () => {
+                this.resizeTabGroup("right");
+            },
+        });
+
+        // Resize tab group left
+        this.addCommand({
+            id: "resize-tab-left",
+            name: "Stretch tab group to the left",
+            callback: () => {
+                this.resizeTabGroup("left");
+            },
+        });
+
+        // Resize tab group up
+        this.addCommand({
+            id: "resize-tab-up",
+            name: "Stretch tab group upward",
+            callback: () => {
+                this.resizeTabGroup("up");
+            },
+        });
+
+        // Resize tab group down
+        this.addCommand({
+            id: "resize-tab-down",
+            name: "Stretch tab group downward",
+            callback: () => {
+                this.resizeTabGroup("down");
             },
         });
     }
@@ -262,5 +299,134 @@ export default class WindowHotkeysPlugin extends Plugin {
             return split;
         }
         return null;
+    }
+
+    resizeTabGroup(direction: "left" | "right" | "up" | "down") {
+        const activeLeaf = this.app.workspace.activeLeaf;
+        if (!activeLeaf) {
+            return;
+        }
+
+        // Find the parent container of the active leaf
+        const parent = activeLeaf.parent;
+        if (!parent) {
+            return;
+        }
+
+        // Determine if we need to resize horizontal or vertical split
+        const isHorizontalResize = direction === "left" || direction === "right";
+
+        // Traverse up to find the correct split and sibling
+        let current: any = activeLeaf.parent;
+        let targetSplit: any = null;
+        let parentSplit: any = null;
+
+        while (current) {
+            if (current.parent) {
+                const parentDirection = (current.parent as any).direction;
+                
+                // For horizontal resize (left/right), we need a vertical split parent
+                // For vertical resize (up/down), we need a horizontal split parent
+                if ((isHorizontalResize && parentDirection === "vertical") ||
+                    (!isHorizontalResize && parentDirection === "horizontal")) {
+                    targetSplit = current;
+                    parentSplit = current.parent;
+                    break;
+                }
+            }
+            current = current.parent;
+        }
+
+        if (!targetSplit || !parentSplit) {
+            return;
+        }
+
+        // Get the children array and find our target's index
+        const children = (parentSplit as any).children;
+        const targetIndex = children.indexOf(targetSplit);
+
+        if (targetIndex === -1 || children.length < 2) {
+            return;
+        }
+
+        // Determine which edge to expand/shrink based on position
+        // For leftmost (index 0): right = expand (push right edge), left = shrink (pull right edge)
+        // For rightmost (last index): left = expand (push left edge), right = shrink (pull left edge)
+        // For middle: try both sides
+        
+        const isFirstInSplit = targetIndex === 0;
+        const isLastInSplit = targetIndex === children.length - 1;
+
+        let shouldExpand: boolean;
+        let siblingIndex: number;
+
+        if (isHorizontalResize) {
+            if (isFirstInSplit) {
+                // Leftmost group
+                shouldExpand = direction === "right";
+                siblingIndex = targetIndex + 1; // Always affect right sibling
+            } else if (isLastInSplit) {
+                // Rightmost group
+                shouldExpand = direction === "left";
+                siblingIndex = targetIndex - 1; // Always affect left sibling
+            } else {
+                // Middle group - expand toward the direction, shrink away from it
+                shouldExpand = true; // Always expand toward the pressed direction
+                siblingIndex = direction === "right" ? targetIndex + 1 : targetIndex - 1;
+            }
+        } else {
+            // Vertical resize
+            if (isFirstInSplit) {
+                // Top group
+                shouldExpand = direction === "down";
+                siblingIndex = targetIndex + 1; // Always affect bottom sibling
+            } else if (isLastInSplit) {
+                // Bottom group
+                shouldExpand = direction === "up";
+                siblingIndex = targetIndex - 1; // Always affect top sibling
+            } else {
+                // Middle group
+                shouldExpand = true;
+                siblingIndex = direction === "down" ? targetIndex + 1 : targetIndex - 1;
+            }
+        }
+
+        if (siblingIndex < 0 || siblingIndex >= children.length) {
+            return;
+        }
+
+        const sibling = children[siblingIndex];
+
+        // Calculate size adjustment
+        const increment = shouldExpand ? RESIZE_STEP : -RESIZE_STEP;
+
+        const currentSize = (targetSplit as any).size || 100;
+        const newSize = Math.max(50, currentSize + increment);
+
+        const siblingSize = (sibling as any).size || 100;
+        const siblingNewSize = Math.max(50, siblingSize - increment);
+
+        // Only apply if both sizes are valid
+        if (newSize < 50 || siblingNewSize < 50) {
+            return;
+        }
+
+        // Apply new sizes
+        (targetSplit as any).size = newSize;
+        (sibling as any).size = siblingNewSize;
+
+        // Force layout update
+        if ((parentSplit as any).containerEl) {
+            // Update flex-grow values for the children
+            if ((targetSplit as any).containerEl) {
+                (targetSplit as any).containerEl.style.flexGrow = String(newSize);
+            }
+            if ((sibling as any).containerEl) {
+                (sibling as any).containerEl.style.flexGrow = String(siblingNewSize);
+            }
+        }
+
+        // Trigger workspace layout
+        this.app.workspace.requestSaveLayout();
     }
 }
