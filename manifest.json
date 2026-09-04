@@ -3,7 +3,7 @@
 	"name": "Window Hotkeys",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Adds hotkeys for moving tabs between split groups in different directions (left, right, up, down)",
+	"description": "Adds hotkeys for moving tabs between split groups (left, right, up, down) and for resizing tab groups",
 	"author": "Amund Ersland",
 	"authorUrl": "https://github.com/amund-ersland",
 	"isDesktopOnly": false

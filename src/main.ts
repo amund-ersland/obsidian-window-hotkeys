@@ -94,7 +94,7 @@ export default class WindowHotkeysPlugin extends Plugin {
         }
 
         // Determine target position with wrapping
-        let targetPosition = { ...currentPosition };
+        const targetPosition = { ...currentPosition };
         
         if (direction === "right") {
             targetPosition.col = (currentPosition.col + 1) % MAX_COLUMNS;
@@ -179,8 +179,6 @@ export default class WindowHotkeysPlugin extends Plugin {
     }
 
     getLeafPosition(leaf: WorkspaceLeaf, layoutInfo: any): { row: number; col: number } | null {
-        const rootSplit = this.app.workspace.rootSplit;
-
         // Find which column and row the leaf belongs to
         for (let colIndex = 0; colIndex < layoutInfo.columns.length; colIndex++) {
             const column = layoutInfo.columns[colIndex];
