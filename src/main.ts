@@ -1,4 +1,5 @@
 import { Plugin, WorkspaceLeaf } from "obsidian";
+import { resizeRightSidebar } from "./sidebar";
 
 const MAX_COLUMNS = 3;
 const MAX_ROWS = 2;
@@ -75,6 +76,23 @@ export default class WindowHotkeysPlugin extends Plugin {
             name: "Stretch tab group downward",
             callback: () => {
                 this.resizeTabGroup("down");
+            },
+        });
+
+        // Resize right sidebar
+        this.addCommand({
+            id: "resize-right-sidebar-wider",
+            name: "Widen right sidebar",
+            callback: () => {
+                resizeRightSidebar(this.app, "wider");
+            },
+        });
+
+        this.addCommand({
+            id: "resize-right-sidebar-narrower",
+            name: "Narrow right sidebar",
+            callback: () => {
+                resizeRightSidebar(this.app, "narrower");
             },
         });
     }

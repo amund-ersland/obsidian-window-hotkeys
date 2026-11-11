@@ -34,6 +34,16 @@ The plugin treats the main editor area as a grid of up to **3 columns × 2 rows*
 - Which edge moves depends on where the group sits. A leftmost group grows with "right" and shrinks with "left"; a rightmost group grows with "left" and shrinks with "right"; a group in the middle always grows toward the direction you press. Vertical resizing behaves the same way for top, bottom, and middle groups.
 - No group can be squeezed below a minimum size, and the resulting layout is saved with the workspace.
 
+### Resize the right sidebar
+
+| Command | Effect |
+| --- | --- |
+| Widen right sidebar | Makes the right sidebar 50 pixels wider |
+| Narrow right sidebar | Makes the right sidebar 50 pixels narrower |
+
+- If the right sidebar is collapsed, "Widen right sidebar" opens it at its previous width.
+- The width stays between 150 pixels and the window width minus 150 pixels.
+
 ## Installation
 
 ### Manual
