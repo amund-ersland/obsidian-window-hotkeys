@@ -1,5 +1,5 @@
 import { Plugin, WorkspaceLeaf } from "obsidian";
-import { resizeRightSidebar } from "./sidebar";
+import { cycleRightSidebarTab, resizeRightSidebar } from "./sidebar";
 
 const MAX_COLUMNS = 3;
 const MAX_ROWS = 2;
@@ -93,6 +93,20 @@ export default class WindowHotkeysPlugin extends Plugin {
             name: "Narrow right sidebar",
             callback: () => {
                 resizeRightSidebar(this.app, "narrower");
+            },
+        });
+        this.addCommand({
+            id: "right-sidebar-next-tab",
+            name: "Next right sidebar tab",
+            callback: () => {
+                cycleRightSidebarTab(this.app, 1);
+            },
+        });
+        this.addCommand({
+            id: "right-sidebar-previous-tab",
+            name: "Previous right sidebar tab",
+            callback: () => {
+                cycleRightSidebarTab(this.app, -1);
             },
         });
     }
