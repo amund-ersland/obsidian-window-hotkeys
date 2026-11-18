@@ -6,3 +6,8 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+/* Toggle maximize tab group: hide the other groups and their resize handles. */
+.window-hotkeys-maximized .window-hotkeys-hidden {
+    display: none !important;
+}

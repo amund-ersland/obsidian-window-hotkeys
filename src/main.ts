@@ -1,11 +1,24 @@
 import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from "obsidian";
 import { cycleRightSidebarTab, resizeRightSidebar } from "./sidebar";
+import {
+    applyLayout,
+    clearMaximize,
+    closeEmptyGroups,
+    copyView,
+    equalizeGroups,
+    focusGroup,
+    LayoutName,
+    moveTabToGroup,
+    openLinkInNeighbor,
+    swapGroup,
+    toggleMaximize,
+} from "./groups";
 
 const MAX_COLUMNS = 3;
 const MAX_ROWS = 2;
 const RESIZE_STEP = 50; // Pixels to resize by
 
-type Direction = "left" | "right" | "up" | "down";
+import type { Direction } from "./groups";
 
 interface WindowHotkeysSettings {
     // Sublime-style: when the last tab leaves a group, the group stays with an empty tab.
@@ -39,6 +52,8 @@ export default class WindowHotkeysPlugin extends Plugin {
                 },
             });
         }
+
+        this.registerGroupCommands();
 
         // Move tab to the right
         this.addCommand({
@@ -144,6 +159,53 @@ export default class WindowHotkeysPlugin extends Plugin {
         });
     }
 
+    onunload() {
+        clearMaximize(this.app);
+    }
+
+    registerGroupCommands() {
+        // 1. Layout presets (Sublime: Cmd+Alt+1..5)
+        const layouts: [LayoutName, string][] = [
+            ["single", "Layout: single group (merge all tabs)"],
+            ["columns-2", "Layout: 2 columns"],
+            ["columns-3", "Layout: 3 columns"],
+            ["rows-2", "Layout: 2 rows"],
+            ["grid-4", "Layout: 2x2 grid"],
+        ];
+        for (const [id, name] of layouts) {
+            this.addCommand({ id: `layout-${id}`, name, callback: () => void applyLayout(this.app, id) });
+        }
+
+        // 2. Numbered groups
+        for (let n = 1; n <= 4; n++) {
+            this.addCommand({ id: `focus-group-${n}`, name: `Focus group ${n}`, callback: () => focusGroup(this.app, n) });
+            this.addCommand({
+                id: `move-tab-to-group-${n}`,
+                name: `Move tab to group ${n}`,
+                callback: () => void moveTabToGroup(this.app, n, this.settings.keepEmptyGroups),
+            });
+        }
+
+        // 3. Maximize, 4. equalize, 7. close empty, 8. open link in neighbor
+        this.addCommand({ id: "toggle-maximize-group", name: "Toggle maximize tab group", callback: () => toggleMaximize(this.app) });
+        this.addCommand({ id: "equalize-groups", name: "Equalize tab group sizes", callback: () => equalizeGroups(this.app) });
+        this.addCommand({ id: "close-empty-groups", name: "Close empty tabs and tab groups", callback: () => closeEmptyGroups(this.app) });
+        this.addCommand({
+            id: "open-link-in-neighbor-group",
+            name: "Open link under cursor in neighbor group",
+            callback: () => void openLinkInNeighbor(this.app),
+        });
+
+        // 5. Swap with neighbor group
+        for (const dir of ["left", "right", "up", "down"] as Direction[]) {
+            this.addCommand({
+                id: `swap-group-${dir}`,
+                name: `Swap tab group with the one ${dir === "up" ? "above" : dir === "down" ? "below" : "to the " + dir}`,
+                callback: () => void swapGroup(this.app, dir),
+            });
+        }
+    }
+
     async moveTabToDirection(direction: Direction) {
         const activeLeaf = this.app.workspace.getMostRecentLeaf(this.app.workspace.rootSplit);
         if (!activeLeaf) {
@@ -221,21 +283,16 @@ export default class WindowHotkeysPlugin extends Plugin {
         this.app.workspace.setActiveLeaf(leaf, { focus: true });
     }
 
-    // Copy view state (file, mode) and ephemeral state (scroll, cursor) from one leaf to another.
-    async copyView(from: WorkspaceLeaf, to: WorkspaceLeaf) {
-        const view = from.view;
-        const state = view.getState();
-        const eState = (view as any).getEphemeralState?.() || {};
-        await to.setViewState({ type: view.getViewType(), state });
-        (to.view as any).setEphemeralState?.(eState);
-    }
-
     allRootLeaves(): WorkspaceLeaf[] {
         const leaves: WorkspaceLeaf[] = [];
         this.app.workspace.iterateRootLeaves((l) => {
             leaves.push(l);
         });
         return leaves;
+    }
+
+    copyView(from: WorkspaceLeaf, to: WorkspaceLeaf) {
+        return copyView(from, to);
     }
 
     getLayoutInfo(): any {
