@@ -1,18 +1,51 @@
-import { Plugin, WorkspaceLeaf } from "obsidian";
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from "obsidian";
 import { cycleRightSidebarTab, resizeRightSidebar } from "./sidebar";
 
 const MAX_COLUMNS = 3;
 const MAX_ROWS = 2;
 const RESIZE_STEP = 50; // Pixels to resize by
 
+type Direction = "left" | "right" | "up" | "down";
+
+interface WindowHotkeysSettings {
+    // Sublime-style: when the last tab leaves a group, the group stays with an empty tab.
+    keepEmptyGroups: boolean;
+}
+
+const DEFAULT_SETTINGS: WindowHotkeysSettings = {
+    keepEmptyGroups: true,
+};
+
 export default class WindowHotkeysPlugin extends Plugin {
+    settings: WindowHotkeysSettings = DEFAULT_SETTINGS;
+
     async onload() {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        this.addSettingTab(new WindowHotkeysSettingTab(this.app, this));
+
+        // Split and move: the current tab goes to a new split, an empty tab stays here.
+        const splitNames: Record<Direction, string> = {
+            right: "Split right: move tab right, new tab here",
+            left: "Split left: move tab left, new tab here",
+            down: "Split down: move tab down, new tab here",
+            up: "Split up: move tab up, new tab here",
+        };
+        for (const dir of ["right", "left", "down", "up"] as Direction[]) {
+            this.addCommand({
+                id: `split-move-${dir}`,
+                name: splitNames[dir],
+                callback: () => {
+                    void this.splitAndMove(dir);
+                },
+            });
+        }
+
         // Move tab to the right
         this.addCommand({
             id: "move-tab-right",
             name: "Move tab to right split",
             callback: () => {
-                this.moveTabToDirection("right");
+                void this.moveTabToDirection("right");
             },
         });
 
@@ -21,7 +54,7 @@ export default class WindowHotkeysPlugin extends Plugin {
             id: "move-tab-left",
             name: "Move tab to left split",
             callback: () => {
-                this.moveTabToDirection("left");
+                void this.moveTabToDirection("left");
             },
         });
 
@@ -30,7 +63,7 @@ export default class WindowHotkeysPlugin extends Plugin {
             id: "move-tab-up",
             name: "Move tab to upper split",
             callback: () => {
-                this.moveTabToDirection("up");
+                void this.moveTabToDirection("up");
             },
         });
 
@@ -39,7 +72,7 @@ export default class WindowHotkeysPlugin extends Plugin {
             id: "move-tab-down",
             name: "Move tab to lower split",
             callback: () => {
-                this.moveTabToDirection("down");
+                void this.moveTabToDirection("down");
             },
         });
 
@@ -111,8 +144,8 @@ export default class WindowHotkeysPlugin extends Plugin {
         });
     }
 
-    moveTabToDirection(direction: "left" | "right" | "up" | "down") {
-        const activeLeaf = this.app.workspace.activeLeaf;
+    async moveTabToDirection(direction: Direction) {
+        const activeLeaf = this.app.workspace.getMostRecentLeaf(this.app.workspace.rootSplit);
         if (!activeLeaf) {
             return;
         }
@@ -140,37 +173,69 @@ export default class WindowHotkeysPlugin extends Plugin {
 
         // Find or create target split at the target position
         let targetLeaf = this.findSplitAtPosition(targetPosition, layoutInfo);
+        let createdNew = false;
 
         // If no split exists at target position, create it
         if (!targetLeaf) {
+            const before = new Set(this.allRootLeaves());
             targetLeaf = this.createSplitAtPosition(targetPosition, activeLeaf);
+            createdNew = !!targetLeaf && !before.has(targetLeaf);
         }
 
-        if (targetLeaf && targetLeaf !== activeLeaf) {
-            // Move the active leaf to the target split
-            const view = activeLeaf.view;
-            const state = view.getState();
-            const eState = (view as any).getEphemeralState?.() || {};
+        if (!targetLeaf || targetLeaf === activeLeaf || targetLeaf.parent === activeLeaf.parent) {
+            return;
+        }
 
-            // Detach the leaf from its current parent
+        // A freshly created split already holds one empty tab: fill it instead of adding a second tab.
+        const destLeaf = createdNew
+            ? targetLeaf
+            : this.app.workspace.createLeafInParent(targetLeaf.parent, -1);
+
+        await this.copyView(activeLeaf, destLeaf);
+
+        const isLastInGroup = (activeLeaf.parent as any)?.children?.length === 1;
+        if (isLastInGroup && this.settings.keepEmptyGroups) {
+            // Keep the group alive with an empty tab (Sublime-style).
+            await activeLeaf.setViewState({ type: "empty" });
+        } else {
             activeLeaf.detach();
-
-            // Create new leaf in target parent and restore the view
-            const newLeaf = this.app.workspace.createLeafInParent(targetLeaf.parent, -1);
-            newLeaf.setViewState({
-                type: view.getViewType(),
-                state: state,
-                active: true,
-            });
-
-            // Restore ephemeral state
-            if ((newLeaf.view as any).setEphemeralState) {
-                (newLeaf.view as any).setEphemeralState(eState);
-            }
-
-            // Set the new leaf as active
-            this.app.workspace.setActiveLeaf(newLeaf, { focus: true });
         }
+
+        this.app.workspace.setActiveLeaf(destLeaf, { focus: true });
+    }
+
+    // Split the current tab group in a direction. The current tab moves into the new
+    // split; focus stays here on a fresh empty tab, so you can open the next file where you stand.
+    async splitAndMove(direction: Direction) {
+        const leaf = this.app.workspace.getMostRecentLeaf(this.app.workspace.rootSplit);
+        if (!leaf) {
+            return;
+        }
+
+        const splitDir = direction === "left" || direction === "right" ? "vertical" : "horizontal";
+        const before = direction === "left" || direction === "up";
+        const newLeaf = this.app.workspace.createLeafBySplit(leaf, splitDir, before);
+
+        await this.copyView(leaf, newLeaf);
+        await leaf.setViewState({ type: "empty" });
+        this.app.workspace.setActiveLeaf(leaf, { focus: true });
+    }
+
+    // Copy view state (file, mode) and ephemeral state (scroll, cursor) from one leaf to another.
+    async copyView(from: WorkspaceLeaf, to: WorkspaceLeaf) {
+        const view = from.view;
+        const state = view.getState();
+        const eState = (view as any).getEphemeralState?.() || {};
+        await to.setViewState({ type: view.getViewType(), state });
+        (to.view as any).setEphemeralState?.(eState);
+    }
+
+    allRootLeaves(): WorkspaceLeaf[] {
+        const leaves: WorkspaceLeaf[] = [];
+        this.app.workspace.iterateRootLeaves((l) => {
+            leaves.push(l);
+        });
+        return leaves;
     }
 
     getLayoutInfo(): any {
@@ -458,5 +523,29 @@ export default class WindowHotkeysPlugin extends Plugin {
 
         // Trigger workspace layout
         this.app.workspace.requestSaveLayout();
+    }
+}
+
+class WindowHotkeysSettingTab extends PluginSettingTab {
+    plugin: WindowHotkeysPlugin;
+
+    constructor(app: App, plugin: WindowHotkeysPlugin) {
+        super(app, plugin);
+        this.plugin = plugin;
+    }
+
+    display(): void {
+        const { containerEl } = this;
+        containerEl.empty();
+
+        new Setting(containerEl)
+            .setName("Keep empty tab groups")
+            .setDesc("When you move the last tab out of a group, keep the group with an empty tab instead of closing it (like Sublime Text).")
+            .addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.keepEmptyGroups).onChange(async (value) => {
+                    this.plugin.settings.keepEmptyGroups = value;
+                    await this.plugin.saveData(this.plugin.settings);
+                }),
+            );
     }
 }
