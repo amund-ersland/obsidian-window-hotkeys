@@ -164,13 +164,15 @@ export default class WindowHotkeysPlugin extends Plugin {
     }
 
     registerGroupCommands() {
-        // 1. Layout presets (Sublime: Cmd+Alt+1..5)
+        // 1. Layout presets (Sublime: Cmd+Alt+1..5, plus 6..7)
         const layouts: [LayoutName, string][] = [
             ["single", "Layout: single group (merge all tabs)"],
             ["columns-2", "Layout: 2 columns"],
             ["columns-3", "Layout: 3 columns"],
             ["rows-2", "Layout: 2 rows"],
             ["grid-4", "Layout: 2x2 grid"],
+            ["columns-2-left-rows", "Layout: 2 columns, left column in 2 rows"],
+            ["columns-2-right-rows", "Layout: 2 columns, right column in 2 rows"],
         ];
         for (const [id, name] of layouts) {
             this.addCommand({ id: `layout-${id}`, name, callback: () => void applyLayout(this.app, id) });

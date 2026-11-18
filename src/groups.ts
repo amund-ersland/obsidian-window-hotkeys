@@ -7,7 +7,14 @@ import { App, Notice, WorkspaceLeaf, WorkspaceParent } from "obsidian";
 // numbered in reading order: top row first, left to right, then the next row.
 
 export type Direction = "left" | "right" | "up" | "down";
-export type LayoutName = "single" | "columns-2" | "columns-3" | "rows-2" | "grid-4";
+export type LayoutName =
+    | "single"
+    | "columns-2"
+    | "columns-3"
+    | "rows-2"
+    | "grid-4"
+    | "columns-2-left-rows"
+    | "columns-2-right-rows";
 
 // Internal Obsidian API that is not in obsidian.d.ts.
 interface ItemInternal {
@@ -137,7 +144,15 @@ async function moveLeafToGroup(
 
 export async function applyLayout(app: App, layout: LayoutName) {
     clearMaximize(app);
-    const count = { single: 1, "columns-2": 2, "columns-3": 3, "rows-2": 2, "grid-4": 4 }[layout];
+    const count = {
+        single: 1,
+        "columns-2": 2,
+        "columns-3": 3,
+        "rows-2": 2,
+        "grid-4": 4,
+        "columns-2-left-rows": 3,
+        "columns-2-right-rows": 3,
+    }[layout];
     const activeLeaf = activeRootLeaf(app);
     const oldGroups = tabGroups(app);
     if (oldGroups.length === 0) {
@@ -185,6 +200,16 @@ export async function applyLayout(app: App, layout: LayoutName) {
         const bottomLeft = split(anchor, "horizontal");
         const bottomRight = split(topRight, "horizontal");
         newGroups.push(topRight.parent, bottomLeft.parent, bottomRight.parent);
+    } else if (layout === "columns-2-left-rows") {
+        // Reading order: 1 top left, 2 right (full height), 3 bottom left.
+        const right = split(anchor, "vertical");
+        const bottomLeft = split(anchor, "horizontal");
+        newGroups.push(right.parent, bottomLeft.parent);
+    } else if (layout === "columns-2-right-rows") {
+        // Reading order: 1 left (full height), 2 top right, 3 bottom right.
+        const topRight = split(anchor, "vertical");
+        const bottomRight = split(topRight, "horizontal");
+        newGroups.push(topRight.parent, bottomRight.parent);
     }
 
     // Step 3: send each tab back to the group with its old number (or the last group).

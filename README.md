@@ -32,12 +32,12 @@ Use this when you want the current note on one side and a new note where you sta
 
 ### Tab groups (Sublime Text style)
 
-Groups are numbered in reading order: the top row from left to right, then the next row. In the 2×2 grid, 1 is top left, 2 top right, 3 bottom left and 4 bottom right.
+Groups are numbered in reading order: the top row from left to right, then the next row. In the 2×2 grid, 1 is top left, 2 top right, 3 bottom left and 4 bottom right. With the left column in 2 rows, 1 is top left, 2 is the right column and 3 bottom left. With the right column in 2 rows, 1 is the left column, 2 top right and 3 bottom right.
 
 | Command | Effect |
 | --- | --- |
 | Layout: single group (merge all tabs) | Merges every tab into one group |
-| Layout: 2 columns / 3 columns / 2 rows / 2x2 grid | Rebuilds the main area with that many groups. Each tab goes back to the group with the same number; extra tabs go to the last group. New groups without tabs show the empty page. Sizes are equalized |
+| Layout: 2 columns / 3 columns / 2 rows / 2x2 grid / 2 columns with the left or right column in 2 rows | Rebuilds the main area with that many groups. Each tab goes back to the group with the same number; extra tabs go to the last group. New groups without tabs show the empty page. Sizes are equalized |
 | Focus group 1–4 | Focuses the visible tab in group N |
 | Move tab to group 1–4 | Moves the active tab to group N. If group N does not exist, a new group is made to the right. Focus follows the tab |
 | Toggle maximize tab group | Hides all other groups (nothing is closed). Run again to show them |
@@ -81,8 +81,8 @@ Layout, swap, split and move work by copying the tab into a new leaf and closing
 | --- | --- |
 | ⌥⇧L / ⌥⇧J | Split right / down: move tab, new tab here |
 | ⌃⌘H/J/K/L | Move tab left / down / up / right |
-| ⌥⌘1 … ⌥⌘5 | Layout: single, 2 columns, 3 columns, 2 rows, 2×2 grid |
-| ⌃⌥1 … ⌃⌥4 | Focus group 1–4 |
+| ⌥⌘1 … ⌥⌘7 | Layout: single, 2 columns, 3 columns, 2 rows, 2×2 grid, 2 columns with left column in 2 rows, 2 columns with right column in 2 rows |
+| ⌃1 … ⌃4 | Focus group 1–4 |
 | ⌃⌘1 … ⌃⌘4 | Move tab to group 1–4 |
 | ⌃⌘M | Toggle maximize tab group |
 | ⌃⌘0 | Equalize tab group sizes |
