@@ -44,7 +44,7 @@ Groups are numbered in reading order: the top row from left to right, then the n
 | Equalize tab group sizes | Gives all groups at each level the same size |
 | Swap tab group with the one to the left / right / above / below | Exchanges all tabs of the two groups. Focus follows the tab you were in |
 | Close empty tabs and tab groups | Closes every empty tab, and so every group that only had empty tabs. At least one tab stays |
-| Open link under cursor in neighbor group | Opens the `[[wiki link]]` or `[markdown](link)` under the cursor as a new tab in the group to the right (then left, below, above). Without a neighbor, splits right. Focus stays in the source note. URLs open in the browser |
+| Open link under cursor in neighbor group | Opens the `[[wiki link]]` or `[markdown](link)` under the cursor as a new tab in the group to the right (then left, below, above). Without a neighbor, splits right. Focus stays in the source note. URLs open in the browser. In a CSV Table (plugin `csv-table`), the link is the selected cell's |
 
 Layout, swap, split and move work by copying the tab into a new leaf and closing the original. View state, scroll position and cursor are kept, but the tab's back/forward history is not.
 

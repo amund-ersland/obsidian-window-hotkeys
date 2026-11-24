@@ -406,6 +406,18 @@ export function closeEmptyGroups(app: App) {
 
 // ---------- 8. open link in the other group ----------
 
+interface CsvTableLinks {
+    linkAtCursor?(): { linktext: string | null; sourcePath: string } | null;
+}
+
+// In a CSV Table (plugin `csv-table`) the link is the selected cell's, not the
+// note editor's. Undefined outside a table; null in a table cell without a link.
+function linkInCsvTable(app: App): { linktext: string | null; sourcePath: string } | undefined {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const csv = (app as any).plugins?.plugins?.["csv-table"] as CsvTableLinks | undefined;
+    return csv?.linkAtCursor?.() ?? undefined;
+}
+
 function linkAtCursor(app: App): string | null {
     const editor = app.workspace.activeEditor?.editor;
     if (!editor) {
@@ -429,17 +441,18 @@ function linkAtCursor(app: App): string | null {
 // left, down, up). Without a neighbor, split right. Focus stays in the note you read.
 export async function openLinkInNeighbor(app: App) {
     const leaf = activeRootLeaf(app);
-    const target = linkAtCursor(app);
+    const csv = linkInCsvTable(app);
+    const target = csv ? csv.linktext : linkAtCursor(app);
     if (!leaf || !target) {
         new Notice("No link under cursor");
         return;
     }
-    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) {
+    if (!csv && /^[a-z][a-z0-9+.-]*:\/\//i.test(target)) {
         window.open(target);
         return;
     }
-    const linktext = decodeURIComponent(target.replace(/^<|>$/g, ""));
-    const sourcePath = app.workspace.getActiveFile()?.path ?? "";
+    const linktext = csv ? target : decodeURIComponent(target.replace(/^<|>$/g, ""));
+    const sourcePath = csv ? csv.sourcePath : (app.workspace.getActiveFile()?.path ?? "");
 
     let group: WorkspaceParent | null = null;
     for (const dir of ["right", "left", "down", "up"] as Direction[]) {
